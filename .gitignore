@@ -1,0 +1,5 @@
+notebooks/assets/_previews/
+notebooks/.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+*.log
+.ngc_api_key
