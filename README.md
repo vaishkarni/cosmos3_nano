@@ -76,7 +76,19 @@ Each notebook opens with its kernel preselected — `Python 3 (DLI)` for 01/02,
 - 01: skip if you passed `HF_TOKEN` (the `!hf auth login` cell is harmless to re-run).
 - 02: the setup cell prints `Cosmos 3 Reasoner NIM: http://cosmos3-reasoner:8000` and the served model `nvidia/cosmos3-nano-reasoner`.
 - 03: the first cell must print `CUDA_VISIBLE_DEVICES: 0`. The first run downloads Cosmos3-Nano (~minutes). Watch `nvidia-smi` in a terminal; the NIM stays up alongside.
-- 04: `preview()` embeds a downscaled clip inline (patched from the DLI original, which needed Jupyter at `/lab`).
+- 04: patched against cosmos-framework 1.2.2 (see below); every generated clip renders inline.
+
+### Changes to the DLI notebooks
+
+01–03 are unmodified apart from kernel metadata. 04 needed fixes for the current framework
+(release 2026-09-20) and for VS Code:
+
+| Cell | DLI original | Here |
+|---|---|---|
+| `preview()` | `<video src="/lab/files/…">` — needs Jupyter Lab serving `/dli/task` at `/lab`; empty box in VS Code | transcodes a small copy and embeds it as a base64 data URI; also accepts URLs; cache keyed by run dir so every run's `vision.mp4` gets its own preview |
+| inverse-dynamics visualisation | `from cosmos_framework.data.vfm.action.pose_utils import pose_rel_to_abs` | module moved: `cosmos_framework.data.generator.action.utils.pose_utils` |
+| policy | `"model_mode": "policy"` | the framework calls this mode `"wam"` (world-action model); `policy` is not in `ModelMode` |
+| the three `%%bash` inference cells | full log in the cell | piped through `grep -v` to hide the multi-KB config dump; the full log is still in `<output>/console.log` |
 
 Prefer Jupyter Lab? `tmux new -s lab ~/start-jupyter.sh`, then
 `brev port-forward <instance> -p 8888:8888` and open `http://localhost:8888/lab/?token=…`.
