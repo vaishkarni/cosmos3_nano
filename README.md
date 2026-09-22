@@ -50,7 +50,7 @@ ending with `SETUP COMPLETE`:
 3. `/opt/cosmos` ← [NVIDIA/cosmos](https://github.com/NVIDIA/cosmos) cookbook (assets, prompts, specs)
 4. `/opt/cosmos3-framework` ← [NVIDIA/cosmos-framework](https://github.com/NVIDIA/cosmos-framework), `uv sync --all-extras --group=cu130-train` (or `cu128-train`, chosen from the driver's CUDA version), plus `ipykernel imageio-ffmpeg matplotlib`
 5. `/opt/dli-jupyter` — plain venv with `jupyterlab openai requests pillow huggingface_hub[cli]`
-6. Jupyter kernels **`dli-python3`** (→ `/opt/dli-jupyter`) and **`cosmos3`** (→ `/opt/cosmos3-framework/.venv`). The notebooks' metadata names these kernels, so VS Code and Jupyter select the right environment automatically. `cosmos3` has `CUDA_VISIBLE_DEVICES=0` baked in (the DLI lab put generation on GPU 1).
+6. Jupyter kernels **`dli-python3`** (→ `/opt/dli-jupyter`) and **`cosmos3`** (→ `/opt/cosmos3-framework/.venv`). The notebooks' metadata names these kernels, so VS Code and Jupyter select the right environment automatically. `cosmos3` has `CUDA_VISIBLE_DEVICES=0` baked in (the DLI lab put generation on GPU 1). Both kernels get `DLI_OUTPUTS=~/cosmos3_nano/outputs`.
 7. `127.0.0.1 cosmos3-reasoner` in `/etc/hosts` (notebook 02's default `NIM_BASE_URL`)
 8. `hf auth login` with `HF_TOKEN`
 9. Starts the Reasoner NIM in the background with `NIM_GPU_MEMORY_UTILIZATION=0.30` so it takes ~43 GB of the H200 and leaves ~100 GB for 03/04 (see `setup/nim.sh` for why the documented `NIM_KVCACHE_PERCENT` does not work here). The key is also saved to `~/.ngc_api_key` (mode 600) so `~/nim.sh restart` works later.
@@ -78,10 +78,28 @@ Each notebook opens with its kernel preselected — `Python 3 (DLI)` for 01/02,
 - 03: the first cell must print `CUDA_VISIBLE_DEVICES: 0`. The first run downloads Cosmos3-Nano (~minutes). Watch `nvidia-smi` in a terminal; the NIM stays up alongside.
 - 04: patched against cosmos-framework 1.2.2 (see below); every generated clip renders inline.
 
+### Where the outputs go
+
+Everything a notebook generates is written under **`outputs/notebookN/`** (git-ignored, the
+folder skeleton is tracked):
+
+| Folder | Contents |
+|---|---|
+| `outputs/notebook1/` | nothing — 01 only logs into Hugging Face |
+| `outputs/notebook2/` | `responses.jsonl` (every prompt/answer pair), grounding and trajectory overlays (`*_boxes.png`, `*_trajectory.png`), the Set-of-Mark image `robot_workspace_marked.png`, `h264_cache/` transcodes |
+| `outputs/notebook3/` | `payloads/*.json`, then one folder per run (`t2v_robot_kitchen/`, `i2v_car_driving/`, `transfer_edge/`) with the generated `.mp4`, `console.log` and sample metadata |
+| `outputs/notebook4/` | `inputs/*.jsonl` specs, one folder per run (`action_forward_dynamics_av/`, `action_inverse_dynamics_av/`, `action_policy_robot/`) with `vision.mp4` + `sample_outputs.json`, and `_previews/` compact copies |
+
+The location comes from the `DLI_OUTPUTS` env var (set on both kernels and in
+`~/.cosmos3-dli.env`); without it the notebooks fall back to `<repo>/outputs` next to
+`/dli/task`. 03/04 still honour `COSMOS3_OUTPUT_ROOT` as a per-run override.
+
 ### Changes to the DLI notebooks
 
-01–03 are unmodified apart from kernel metadata. 04 needed fixes for the current framework
-(release 2026-09-20) and for VS Code:
+01 is unmodified apart from kernel metadata. 02–04 write to `outputs/notebookN/` instead of
+`/tmp` and `/opt/cosmos3-framework/outputs` (02 additionally saves its overlays and a
+`responses.jsonl` log; the DLI original only displayed them). 04 also needed fixes for the
+current framework (release 2026-09-20) and for VS Code:
 
 | Cell | DLI original | Here |
 |---|---|---|
@@ -102,7 +120,9 @@ sudo -E bash ~/cosmos3_nano/brev-setup.sh   # re-run setup (idempotent) after a 
 ```
 
 Env for shells and kernels lives in `~/.cosmos3-dli.env` (sourced from `~/.bashrc`):
-`COSMOS_ROOT`, `COSMOS3_REPO`, `CUDA_VISIBLE_DEVICES=0`, `NIM_BASE_URL`, `HF_HOME`.
+`COSMOS_ROOT`, `COSMOS3_REPO`, `DLI_OUTPUTS`, `CUDA_VISIBLE_DEVICES=0`, `NIM_BASE_URL`, `HF_HOME`.
+
+To pull generated videos back to your laptop: `brev copy <instance>:/home/ubuntu/cosmos3_nano/outputs ./outputs`.
 
 ## 5. Troubleshooting
 
@@ -123,6 +143,7 @@ setup/user-setup.sh      venvs, kernels, HF login, NIM
 setup/nim.sh             start/stop/status/logs for the Reasoner NIM  (~/nim.sh)
 setup/start-jupyter.sh   optional Jupyter Lab at /lab                 (~/start-jupyter.sh)
 notebooks/               the four DLI notebooks (kernel metadata set), assets/toaster_6sec.mp4, images/
+outputs/notebook{1..4}/  everything the notebooks generate (git-ignored)
 ```
 
 Upstream (NIM image tag, `uv` dependency groups, HF gating) moves quickly; the values

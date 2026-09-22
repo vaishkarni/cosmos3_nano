@@ -8,7 +8,9 @@ REPO_DIR="${REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 COSMOS_ROOT=/opt/cosmos
 COSMOS3_REPO=/opt/cosmos3-framework
 JUPYTER_VENV=/opt/dli-jupyter
+DLI_OUTPUTS="$REPO_DIR/outputs"  # notebook N writes everything it generates to outputs/notebookN
 UV_GROUP="${UV_GROUP:-auto}"     # cu130-train | cu128-train | auto (from the driver's CUDA version)
+mkdir -p "$DLI_OUTPUTS"/notebook{1,2,3,4}
 
 log() { printf '\n\033[1;36m--> %s\033[0m\n' "$*"; }
 die() { printf '\033[1;31mERROR: %s\033[0m\n' "$*" >&2; exit 1; }
@@ -60,10 +62,10 @@ log "Jupyter venv -> $JUPYTER_VENV"
 log "Kernels: dli-python3 (01/02) and cosmos3 (03/04)"
 "$JUPYTER_VENV/bin/python" -m ipykernel install --user --name dli-python3 --display-name "Python 3 (DLI)"
 "$COSMOS3_REPO/.venv/bin/python" -m ipykernel install --user --name cosmos3 --display-name "Cosmos 3 (framework)"
-python3 - "$HOME/.local/share/jupyter/kernels" "$COSMOS_ROOT" "$COSMOS3_REPO" "$JUPYTER_VENV" <<'EOF'
+python3 - "$HOME/.local/share/jupyter/kernels" "$COSMOS_ROOT" "$COSMOS3_REPO" "$JUPYTER_VENV" "$DLI_OUTPUTS" <<'EOF'
 import json, sys, os
-kdir, cosmos_root, cosmos3_repo, jupyter_venv = sys.argv[1:]
-common = {"COSMOS_ROOT": cosmos_root, "COSMOS3_REPO": cosmos3_repo,
+kdir, cosmos_root, cosmos3_repo, jupyter_venv, dli_outputs = sys.argv[1:]
+common = {"COSMOS_ROOT": cosmos_root, "COSMOS3_REPO": cosmos3_repo, "DLI_OUTPUTS": dli_outputs,
           "NIM_BASE_URL": "http://cosmos3-reasoner:8000",
           "HF_HOME": os.path.expanduser("~/.cache/huggingface")}
 envs = {
@@ -83,6 +85,7 @@ cat >"$HOME/.cosmos3-dli.env" <<EOF
 export COSMOS_ROOT="$COSMOS_ROOT"
 export COSMOS3_REPO="$COSMOS3_REPO"
 export JUPYTER_VENV="$JUPYTER_VENV"
+export DLI_OUTPUTS="$DLI_OUTPUTS"
 export CUDA_VISIBLE_DEVICES=0
 export NIM_BASE_URL="http://cosmos3-reasoner:8000"
 export HF_HOME="\$HOME/.cache/huggingface"
