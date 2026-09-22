@@ -52,7 +52,7 @@ mkdir -p "$COSMOS3_REPO/outputs"
 log "Jupyter venv -> $JUPYTER_VENV"
 [[ -x "$JUPYTER_VENV/bin/python" ]] || python3 -m venv "$JUPYTER_VENV"
 "$JUPYTER_VENV/bin/pip" install -q -U pip
-"$JUPYTER_VENV/bin/pip" install -q -U jupyterlab ipykernel ipywidgets openai requests pillow "huggingface_hub[cli]"
+"$JUPYTER_VENV/bin/pip" install -q -U jupyterlab ipykernel ipywidgets openai requests pillow huggingface_hub
 
 # ---------------------------------------------------------------- kernelspecs
 # Names must match metadata.kernelspec.name in the notebooks so VS Code / Jupyter
