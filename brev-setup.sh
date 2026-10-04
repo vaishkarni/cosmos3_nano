@@ -3,6 +3,7 @@
 # during first boot, with the launch parameters exported as environment variables:
 #
 #   NGC_API_KEY  (required)  free NVIDIA Developer Program key -> pulls + runs the Reasoner NIM
+#                (NV_API_KEY is accepted as an alias: the published launchable uses that name)
 #   HF_TOKEN     (optional)  Hugging Face token -> `hf auth login`, so notebook 01 is already done
 #
 # Launchable setup script:
@@ -49,6 +50,8 @@ fi
 chown -R "$TARGET_USER:$TARGET_USER" "$REPO_DIR"
 
 # ------------------------------------------------------- root: secrets + shell env
+# The published launchable names this parameter NV_API_KEY; accept either name.
+NGC_API_KEY="${NGC_API_KEY:-${NV_API_KEY:-}}"
 if [[ -n "${NGC_API_KEY:-}" ]]; then
   install -m 600 -o "$TARGET_USER" -g "$TARGET_USER" /dev/stdin "$TARGET_HOME/.ngc_api_key" <<<"$NGC_API_KEY"
 fi

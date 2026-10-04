@@ -67,7 +67,10 @@ import json, sys, os
 kdir, cosmos_root, cosmos3_repo, jupyter_venv, dli_outputs = sys.argv[1:]
 common = {"COSMOS_ROOT": cosmos_root, "COSMOS3_REPO": cosmos3_repo, "DLI_OUTPUTS": dli_outputs,
           "NIM_BASE_URL": "http://cosmos3-reasoner:8000",
-          "HF_HOME": os.path.expanduser("~/.cache/huggingface")}
+          "HF_HOME": os.path.expanduser("~/.cache/huggingface"),
+          # The framework's isolated `hf` CLI crashes on the Xet transfer backend while fetching
+          # nvidia/Cosmos-Guardrail1 ("Unable to parse string as hex hash value"); plain HTTP works.
+          "HF_HUB_DISABLE_XET": "1"}
 envs = {
     "dli-python3": {**common, "PATH": f"{jupyter_venv}/bin:" + os.environ["PATH"]},   # so `!hf ...` works in 01
     "cosmos3":     {**common, "CUDA_VISIBLE_DEVICES": "0", "LD_LIBRARY_PATH": ""},    # notebooks default to GPU 1
@@ -89,6 +92,7 @@ export DLI_OUTPUTS="$DLI_OUTPUTS"
 export CUDA_VISIBLE_DEVICES=0
 export NIM_BASE_URL="http://cosmos3-reasoner:8000"
 export HF_HOME="\$HOME/.cache/huggingface"
+export HF_HUB_DISABLE_XET=1   # Xet backend crashes on the Cosmos-Guardrail1 download
 export LOCAL_NIM_CACHE="\$HOME/.cache/nim"
 export PATH="\$HOME/.local/bin:$JUPYTER_VENV/bin:\$PATH"
 EOF
@@ -98,6 +102,15 @@ mkdir -p "$HOME/.cache/huggingface"
 if [[ -n "${HF_TOKEN:-}" ]]; then
   log "Hugging Face login"
   HF_TOKEN= "$JUPYTER_VENV/bin/hf" auth login --token "$HF_TOKEN" >/dev/null && "$JUPYTER_VENV/bin/hf" auth whoami
+  # Generation in 03/04 downloads the gated guardrail model first; fail loudly here, not mid-workshop.
+  "$JUPYTER_VENV/bin/python" - <<'PY' || true
+from huggingface_hub import HfApi
+try:
+    HfApi().auth_check("nvidia/Cosmos-Guardrail1"); print("Cosmos-Guardrail1: access OK")
+except Exception as e:
+    print(f"WARNING: no access to nvidia/Cosmos-Guardrail1 ({type(e).__name__}). Accept its licence at "
+          "https://huggingface.co/nvidia/Cosmos-Guardrail1 with this account, or notebooks 03/04 will fail.")
+PY
 else
   echo "HF_TOKEN not provided - run notebook 01 (or \`hf auth login\`) before 03."
 fi
