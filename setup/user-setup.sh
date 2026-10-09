@@ -73,7 +73,10 @@ common = {"COSMOS_ROOT": cosmos_root, "COSMOS3_REPO": cosmos3_repo, "DLI_OUTPUTS
           "HF_HUB_DISABLE_XET": "1"}
 envs = {
     "dli-python3": {**common, "PATH": f"{jupyter_venv}/bin:" + os.environ["PATH"]},   # so `!hf ...` works in 01
-    "cosmos3":     {**common, "CUDA_VISIBLE_DEVICES": "0", "LD_LIBRARY_PATH": ""},    # notebooks default to GPU 1
+    # PATH: the framework shells out to `uv run ... hf download` for Cosmos-Guardrail1; Brev's
+    # jupyter.service PATH lacks ~/.local/bin, so the kernel must carry it (FileNotFoundError: uv).
+    "cosmos3":     {**common, "CUDA_VISIBLE_DEVICES": "0", "LD_LIBRARY_PATH": "",
+                    "PATH": os.environ["PATH"]},
 }
 for name, env in envs.items():
     p = f"{kdir}/{name}/kernel.json"
